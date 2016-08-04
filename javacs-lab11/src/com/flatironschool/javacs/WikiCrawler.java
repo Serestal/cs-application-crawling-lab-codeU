@@ -7,9 +7,12 @@ import java.util.Map.Entry;
 import java.util.Queue;
 
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import redis.clients.jedis.Jedis;
+
 
 
 public class WikiCrawler {
@@ -55,7 +58,26 @@ public class WikiCrawler {
 	 */
 	public String crawl(boolean testing) throws IOException {
         // FILL THIS IN!
-		return null;
+        // Choose and remove a URL from the queue in FIFO order.
+        String url = queue.poll();
+        Elements paragraphs;
+
+        if (testing) {
+        	// Read the contents of the page using WikiFetcher.readWikipedia, which reads cached copies of pages we have included in this repository for testing purposes (to avoid problems if the Wikipedia version changes).
+			// Index pages regardless of whether they are already indexed.
+			// Find all the internal links on the page and add them to the queue in the order they appear. "Internal links" are links to other Wikipedia pages.
+			// Return the URL of the page it indexed.
+        	paragraphs = wf.readWikipedia(url);
+        } else {
+			// If the URL is already indexed, it should not index it again, and should return null.
+			// Otherwise it should read the contents of the page using WikiFetcher.fetchWikipedia, which reads current content from the Web.
+			// Then it should index the page, add links to the queue, and return the URL of the page it indexed.
+        	if (index.isIndexed(url)) return null;
+        	paragraphs = wf.fetchWikipedia(url);
+        }
+        index.indexPage(url, paragraphs);
+        queueInternalLinks(paragraphs);
+        return url;
 	}
 	
 	/**
@@ -65,8 +87,46 @@ public class WikiCrawler {
 	 */
 	// NOTE: absence of access level modifier means package-level
 	void queueInternalLinks(Elements paragraphs) {
+		int i = 0;
         // FILL THIS IN!
-	}
+		for (Element paragraph : paragraphs) {
+			Elements links = paragraph.select("a[href]");
+			for (Element link : links) {
+				String url = link.attr("href");
+				if(url.startsWith("/wiki/")) {
+					i++;
+					queue.add("https://en.wikipedia.org" + url);
+				}
+			}
+		}
+    }
+
+  //       // for each paragraph on the page
+		// for (Element paragraph : paragraphs) {
+		// 	// iterate through the dom tree
+
+
+		// 	Iterable<Node> iter = new WikiNodeIterable(paragraph);
+		// 	for (Node node: iter) {
+		// 		if (node instanceof TextNode && isLink((TextNode) node)) {
+		// 			String url = ((Element)node.parent()).attr("href");
+		// 			// if this link is not the current link, return it!
+		// 			if(!queue.contains(url) && !url.contains("#")){
+		// 				queue.add(url);
+		// 			} 
+		// 		}
+	 //        }
+	 //    }
+
+	/** 
+	 *	Given a text node, returns true if it is a link that is not 
+	 * 	in italics, parenthesis, or links to the current page.
+	**/
+
+	// private static boolean isLink(TextNode node) {
+	// 	Element parent = (Element) node.parent();
+	// 	return (parent.tagName() == "a");
+	// }
 
 	public static void main(String[] args) throws IOException {
 		
